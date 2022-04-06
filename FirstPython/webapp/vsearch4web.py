@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, escape
+from flask import Flask, render_template, request, escape ,session 
 from vsearch import search4letters
-from DBcm import UseDatabase
+from DBcm import UseDatabase, SQLError, SqlExitError
+from check_logged_in import check_logged_in
 
 ope_path = """py -3 E:\PY_WORKSPACE\FirstPython\webapp\vsearch4web.py"""
 
@@ -11,7 +12,7 @@ app.config['dbconfig'] = {
         'host' : '192.168.5.5',
         'user' : 'root',
         'password' : '123456',
-        'database' : 'vsearchlogDB',}
+        'database' : 'vsearchlogDB1',}
 
 
 def hello() -> '302':
@@ -43,7 +44,14 @@ def do_search() -> 'html':
     
     title = 'Here are you results:'
     results = str(search4letters(phrase, letters))
-    log_request(request, results)
+    
+    # 处理异常
+    try:
+        log_request(request, results)
+    except SQLError as err:
+        print("****LOG ERROR*** : " + str(err))
+    except SqlExitError as err:
+        print('exit error is : ' + err)
     return render_template('results.html',
                            the_phrase=phrase,
                            the_letters=letters,
@@ -56,6 +64,7 @@ def entry_page() -> 'html':
                            the_title='Welcom to search4letters on the web!')
 
 @app.route('/viewlog')
+@check_logged_in
 def view_the_log() -> 'html':
     
     # 上下文管理器在数据库读日志
